@@ -1,0 +1,22 @@
+// Prisma schema scaffold — Phase 1 placeholder only.
+// Full domain schema is intentionally deferred.
+// See docs/DATABASE_SCHEMA.md and docs/ARCHITECTURE_DECISIONS_PENDING.md (ADP-004).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// Placeholder model to keep the schema valid until domain modeling begins.
+/// Do not use this model for production domain data.
+model SchemaBootstrap {
+  id        String   @id @default(uuid()) @db.Uuid
+  label     String   @default("phase-1-bootstrap")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("schema_bootstrap")
+}

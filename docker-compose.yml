@@ -1,0 +1,46 @@
+# Hospital System — Docker Compose (structural scaffold)
+#
+# Phase 0/1: placeholder services only. Do NOT treat this as production configuration.
+# Full PostgreSQL / Redis / MinIO production setup begins in later phases.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    profiles: ["infra"]
+    environment:
+      POSTGRES_USER: hospital
+      POSTGRES_PASSWORD: hospital
+      POSTGRES_DB: hospital
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./infrastructure/docker/data/postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hospital -d hospital"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    profiles: ["infra"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./infrastructure/docker/data/redis:/data
+
+  minio:
+    image: minio/minio:latest
+    profiles: ["infra"]
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: changeme
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - ./infrastructure/docker/data/minio:/data
+
+# Usage (later phases):
+#   docker compose --profile infra up -d

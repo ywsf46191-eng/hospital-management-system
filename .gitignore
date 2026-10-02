@@ -1,0 +1,56 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Builds / outputs
+dist/
+build/
+.next/
+out/
+coverage/
+*.tsbuildinfo
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS / editor
+.DS_Store
+Thumbs.db
+Desktop.ini
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+
+# Temporary extraction / local scratch
+_extracted_docs/
+*.tmp
+*.temp
+
+# Prisma
+prisma/*.db
+prisma/*.db-journal
+
+# Test artifacts
+playwright-report/
+test-results/
+
+# Docker volumes / local data
+infrastructure/docker/data/
+*.pem
+*.key
+!infrastructure/**/*.example.key
+
+# Misc
+.turbo/
+.cache/
