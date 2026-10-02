@@ -1,16 +1,19 @@
 # Phase 0 + Phase 1 foundation verification.
 # Usage: pnpm verify   (or) powershell -ExecutionPolicy Bypass -File scripts/verify-foundation.ps1
 
-$ErrorActionPreference = 'Stop'
+# Windows PowerShell turns native stderr (e.g. Node deprecation warnings) into errors;
+# step results are decided by exit codes instead.
+$ErrorActionPreference = 'Continue'
 Set-Location (Split-Path $PSScriptRoot -Parent)
 
 $results = [ordered]@{}
 
 function Invoke-Step([string]$name, [scriptblock]$action) {
   Write-Host "`n=== $name ===" -ForegroundColor Cyan
+  $global:LASTEXITCODE = 0
   try {
     & $action
-    if ($LASTEXITCODE -and $LASTEXITCODE -ne 0) { throw "exit code $LASTEXITCODE" }
+    if ($LASTEXITCODE -ne 0) { throw "exit code $LASTEXITCODE" }
     $results[$name] = 'PASS'
   } catch {
     $results[$name] = "FAIL ($_)"
@@ -21,7 +24,7 @@ function Wait-Http([string]$url, [int]$timeoutSec = 90) {
   $deadline = (Get-Date).AddSeconds($timeoutSec)
   while ((Get-Date) -lt $deadline) {
     try {
-      $response = Invoke-WebRequest -Uri $url -UseBasicParsing -TimeoutSec 5
+      $response = Invoke-WebRequest -Uri $url -UseBasicParsing -TimeoutSec 5 -ErrorAction Stop
       if ($response.StatusCode -eq 200) { return $response }
     } catch {
       Start-Sleep -Seconds 2
@@ -30,7 +33,7 @@ function Wait-Http([string]$url, [int]$timeoutSec = 90) {
   throw "Timed out waiting for $url"
 }
 
-Invoke-Step 'install' { pnpm install --fetch-retries 5 --fetch-timeout 120000 }
+Invoke-Step 'install' { pnpm install --prefer-offline --fetch-retries 5 --fetch-timeout 120000 }
 Invoke-Step 'lint' { pnpm lint }
 Invoke-Step 'typecheck' { pnpm typecheck }
 Invoke-Step 'build:packages' { pnpm build:packages }
@@ -46,7 +49,7 @@ try {
     if (-not $body.success -or $body.data.status -ne 'ok') { throw 'unexpected health payload' }
   }
 
-  $web = Start-Process -FilePath 'pnpm' -ArgumentList '--filter', '@hospital/web', 'start' -PassThru -WindowStyle Hidden
+  $web = Start-Process -FilePath 'pnpm.cmd' -ArgumentList '--filter', '@hospital/web', 'start' -PassThru -WindowStyle Hidden
   Invoke-Step 'web health' {
     $page = Wait-Http 'http://localhost:3000/health'
     if ($page.Content -notmatch 'Health') { throw 'health page content missing' }

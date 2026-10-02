@@ -79,7 +79,7 @@ pnpm verify
 
 Phase 0 (repository initialization) + Phase 1 (monorepo foundation) only.
 
-Status: files created, **validation pending** (dependency install not yet completed).
+Status: implemented and verified with `pnpm verify`.
 
 - No authentication / Keycloak yet
 - No patient / appointment / clinical modules yet
