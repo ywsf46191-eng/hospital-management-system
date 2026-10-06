@@ -1,18 +1,23 @@
+import { loadRootEnv } from './config/load-env';
+loadRootEnv();
+
+import { Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
-import { AppModule } from './app.module';
 import { API_PREFIX } from '@hospital/config';
+import { AppModule } from './app.module';
+import { APP_CONFIG } from './config/config.module';
+import type { AppConfig } from './config/app-config';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  app.setGlobalPrefix(API_PREFIX.replace(/^\//, ''));
-  app.enableCors({
-    origin: true,
-    credentials: true,
-  });
+  const config = app.get<AppConfig>(APP_CONFIG);
 
-  const port = Number(process.env.API_PORT ?? 4000);
-  await app.listen(port);
-  console.log(`API listening on http://localhost:${port}${API_PREFIX}`);
+  app.setGlobalPrefix(API_PREFIX.replace(/^\//, ''));
+  app.enableCors({ origin: config.corsOrigins, credentials: true });
+  app.enableShutdownHooks();
+
+  await app.listen(config.apiPort);
+  Logger.log(`API listening on port ${config.apiPort} (${API_PREFIX})`, 'Bootstrap');
 }
 
 void bootstrap();

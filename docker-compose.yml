@@ -1,46 +1,175 @@
-# Hospital System — Docker Compose (structural scaffold)
+# Hospital System — local infrastructure (Phase 2)
 #
-# Phase 0/1: placeholder services only. Do NOT treat this as production configuration.
-# Full PostgreSQL / Redis / MinIO production setup begins in later phases.
+# Default services (infrastructure):   postgres, redis, minio, minio-init
+# Optional services (profile "app"):   api, web
+#
+#   docker compose up -d --wait                 # infrastructure only
+#   docker compose --profile app up -d --build  # infrastructure + containerized api/web
+#
+# Data services publish ports on 127.0.0.1 only (host development access).
+# They are never bound to LAN/public interfaces. Required secrets come from `.env`
+# (see `.env.example` and `scripts/init-local-env.ps1`); there are no default passwords.
+# See docs/INFRASTRUCTURE_LOCAL_DEVELOPMENT.md.
+
+name: hospital
+
+x-restart: &restart
+  restart: unless-stopped
 
 services:
   postgres:
-    image: postgres:16-alpine
-    profiles: ["infra"]
+    <<: *restart
+    image: postgres:17.6-alpine
     environment:
-      POSTGRES_USER: hospital
-      POSTGRES_PASSWORD: hospital
-      POSTGRES_DB: hospital
+      POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB is required}
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER is required}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
     ports:
-      - "5432:5432"
+      - "127.0.0.1:${POSTGRES_HOST_PORT:-5432}:5432"
     volumes:
-      - ./infrastructure/docker/data/postgres:/var/lib/postgresql/data
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - database-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U hospital -d hospital"]
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  redis:
+    <<: *restart
+    image: redis:7.4.5-alpine
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
+    command: ["sh", "-c", "exec redis-server --appendonly yes --requirepass \"$${REDIS_PASSWORD}\""]
+    ports:
+      - "127.0.0.1:${REDIS_HOST_PORT:-6379}:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - database-network
+    healthcheck:
+      test: ["CMD-SHELL", "REDISCLI_AUTH=\"$${REDIS_PASSWORD}\" redis-cli ping | grep -q PONG"]
       interval: 10s
       timeout: 5s
       retries: 5
 
-  redis:
-    image: redis:7-alpine
-    profiles: ["infra"]
-    ports:
-      - "6379:6379"
-    volumes:
-      - ./infrastructure/docker/data/redis:/data
-
+  # TEMPORARY (Phase 2 only, see docs/ARCHITECTURE_DECISIONS_PENDING.md ADP-005):
+  # official minio/minio images are no longer published. Chainguard build of MinIO
+  # RELEASE.2026-09-22T19-25-18Z, pinned by digest. Not a production decision.
   minio:
-    image: minio/minio:latest
-    profiles: ["infra"]
-    command: server /data --console-address ":9001"
+    <<: *restart
+    image: cgr.dev/chainguard/minio@sha256:4cf4831a2bbcf13ddca09c1cbcc9faff716dd3c4247e0babc32864b8ee8e0034
+    command: ["server", "/data", "--console-address", ":9001"]
     environment:
-      MINIO_ROOT_USER: minioadmin
-      MINIO_ROOT_PASSWORD: changeme
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:?MINIO_ROOT_USER is required}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD is required}
     ports:
-      - "9000:9000"
-      - "9001:9001"
+      - "127.0.0.1:${MINIO_HOST_PORT:-9000}:9000"
+      - "127.0.0.1:${MINIO_CONSOLE_HOST_PORT:-9001}:9001"
     volumes:
-      - ./infrastructure/docker/data/minio:/data
+      - minio-data:/data
+    networks:
+      - storage-network
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
-# Usage (later phases):
-#   docker compose --profile infra up -d
+  # One-shot job: creates the private application bucket and a least-privilege
+  # application user (MINIO_ACCESS_KEY) restricted to that bucket.
+  minio-init:
+    # TEMPORARY (ADP-005): Chainguard MinIO client (dev variant: includes sh/sed), pinned by digest.
+    image: cgr.dev/chainguard/minio-client@sha256:3821d1d13eeed245d780432596c41e5a8632aef6ea61f841e3da870c2518db01
+    depends_on:
+      minio:
+        condition: service_healthy
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:?MINIO_ROOT_USER is required}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD is required}
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:?MINIO_ACCESS_KEY is required}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:?MINIO_SECRET_KEY is required}
+      MINIO_BUCKET: ${MINIO_BUCKET:?MINIO_BUCKET is required}
+    entrypoint: ["/bin/sh", "/scripts/init-bucket.sh"]
+    volumes:
+      - ./infrastructure/docker/minio:/scripts:ro
+    networks:
+      - storage-network
+    restart: "no"
+
+  api:
+    <<: *restart
+    profiles: ["app"]
+    build:
+      context: .
+      dockerfile: infrastructure/docker/api.Dockerfile
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+    environment:
+      NODE_ENV: production
+      API_PORT: 4000
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=public
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
+      MINIO_ENDPOINT: minio
+      MINIO_PORT: 9000
+      MINIO_USE_SSL: "false"
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
+      MINIO_BUCKET: ${MINIO_BUCKET}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000}
+    ports:
+      - "127.0.0.1:${API_HOST_PORT:-4000}:4000"
+    networks:
+      - proxy-network
+      - application-network
+      - database-network
+      - storage-network
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4000/api/v1/health/live').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  web:
+    <<: *restart
+    profiles: ["app"]
+    build:
+      context: .
+      dockerfile: infrastructure/docker/web.Dockerfile
+    depends_on:
+      api:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      HOSTNAME: 0.0.0.0
+      API_INTERNAL_BASE_URL: http://api:4000/api/v1
+    ports:
+      - "127.0.0.1:${WEB_HOST_PORT:-3000}:3000"
+    networks:
+      - proxy-network
+      - application-network
+
+networks:
+  # Entry point for a future reverse proxy (nginx/Traefik).
+  proxy-network:
+  # Internal application-to-application traffic (web -> api).
+  application-network:
+  # PostgreSQL and Redis; reachable only by the api.
+  database-network:
+  # MinIO object storage; reachable only by the api and the init job.
+  storage-network:
+
+volumes:
+  postgres-data:
+  redis-data:
+  minio-data:

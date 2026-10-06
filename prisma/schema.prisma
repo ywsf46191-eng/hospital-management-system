@@ -1,6 +1,13 @@
-// Prisma schema scaffold — Phase 1 placeholder only.
-// Full domain schema is intentionally deferred.
-// See docs/DATABASE_SCHEMA.md and docs/ARCHITECTURE_DECISIONS_PENDING.md (ADP-004).
+// Prisma schema — Phase 2 infrastructure foundation.
+//
+// No domain models yet. Domain schema (Hospital, Patient, Encounter, ...) is
+// intentionally deferred until the tenant field convention is decided:
+// see docs/DATABASE_SCHEMA.md and docs/ARCHITECTURE_DECISIONS_PENDING.md (ADP-004).
+//
+// Commands (run from the repository root):
+//   pnpm db:generate         generate Prisma Client for apps/api
+//   pnpm db:migrate:deploy   apply committed migrations
+//   pnpm db:migrate:status   show migration status
 
 generator client {
   provider = "prisma-client-js"
@@ -9,14 +16,4 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
-}
-
-/// Placeholder model to keep the schema valid until domain modeling begins.
-/// Do not use this model for production domain data.
-model SchemaBootstrap {
-  id        String   @id @default(uuid()) @db.Uuid
-  label     String   @default("phase-1-bootstrap")
-  createdAt DateTime @default(now()) @map("created_at")
-
-  @@map("schema_bootstrap")
 }

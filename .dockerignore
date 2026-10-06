@@ -1,0 +1,11 @@
+**/node_modules
+**/dist
+**/dist-test
+**/.next
+**/coverage
+.git
+.env
+.env.*
+!.env.example
+وثيقة المستشفى الكاملة
+infrastructure/docker/data

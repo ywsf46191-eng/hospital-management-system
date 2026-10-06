@@ -132,6 +132,52 @@ Documentation mentions both `tenant_id` and `hospital_id` as acceptable relation
 
 ---
 
+## 5. MinIO Container Image Availability
+
+| Field | Value |
+|-------|-------|
+| **ID** | ADP-005 |
+| **Status** | `PENDING DECISION` |
+| **Discovered** | Phase 2 verification (2026-10-06) |
+| **Blocking for** | Phase 2 — Infrastructure Foundation (object storage connectivity) |
+
+### Problem
+
+MinIO is the approved on-premise object storage, but no official container image can be pulled:
+
+- `minio/minio` and `minio/mc` were deleted from Docker Hub (September 2026).
+- `quay.io/minio/minio` and `quay.io/minio/mc` return "no such manifest" / HTTP 401 from this machine.
+- The MinIO community edition repository was archived (April 2026) and is distributed as source only;
+  the community edition no longer receives security fixes.
+
+PostgreSQL and Redis are unaffected and verified. The API is decoupled from MinIO through the
+`ObjectStorage` port, and the adapter uses the S3-compatible MinIO SDK.
+
+### Options (for later decision)
+
+1. **Build MinIO from the archived source** into a project-owned image (AGPL-3.0, unmaintained, no security fixes).
+2. **Third-party MinIO image** (available now: `cgr.dev/chainguard/minio`, `bitnamilegacy/minio`) — adds a vendor
+   trust dependency; `bitnamilegacy` is itself frozen.
+3. **Replace MinIO with another S3-compatible object store** (e.g. SeaweedFS, Garage) behind the existing
+   `ObjectStorage` port — changes an approved stack component and requires explicit approval.
+
+### Interim measure (approved 2026-10-06, Phase 2 only)
+
+- MinIO remains the official object storage in the architecture.
+- Local development and Phase 2 verification use Chainguard MinIO images pinned by digest:
+  - server: `cgr.dev/chainguard/minio@sha256:4cf4831a2bbcf13ddca09c1cbcc9faff716dd3c4247e0babc32864b8ee8e0034`
+    (MinIO `RELEASE.2026-09-22T19-25-18Z`)
+  - client: `cgr.dev/chainguard/minio-client@sha256:3821d1d13eeed245d780432596c41e5a8632aef6ea61f841e3da870c2518db01`
+- This is **not** a production decision. Building MinIO from source and replacing MinIO
+  (Garage, SeaweedFS) were explicitly not chosen.
+
+### Decision
+
+`PENDING DECISION` — production MinIO image source, licensing and deployment model must be decided
+before production.
+
+---
+
 ## Change Control
 
 When a decision is made:

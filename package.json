@@ -5,7 +5,7 @@
   "description": "Modular multi-tenant Hospital Information System (HIS/HMS)",
   "packageManager": "pnpm@9.15.0",
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
   },
   "scripts": {
     "dev": "pnpm -r --parallel --filter @hospital/web --filter @hospital/api run dev",
@@ -16,11 +16,23 @@
     "build:api": "pnpm --filter @hospital/api build",
     "lint": "pnpm -r --filter @hospital/config --filter @hospital/types --filter @hospital/validation --filter @hospital/ui --filter @hospital/web --filter @hospital/api run lint",
     "typecheck": "pnpm build:packages && pnpm -r --filter @hospital/config --filter @hospital/types --filter @hospital/validation --filter @hospital/ui --filter @hospital/web --filter @hospital/api run typecheck",
-    "test": "pnpm -r --if-present run test",
+    "test": "pnpm build:packages && pnpm --filter @hospital/api test",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "build:packages": "pnpm -r --filter @hospital/config --filter @hospital/types --filter @hospital/validation --filter @hospital/ui run build",
-    "verify": "powershell -ExecutionPolicy Bypass -File scripts/verify-foundation.ps1"
+    "verify": "powershell -ExecutionPolicy Bypass -File scripts/verify-foundation.ps1",
+    "test:integration": "pnpm build:packages && pnpm --filter @hospital/api test:integration",
+    "env:init": "powershell -ExecutionPolicy Bypass -File scripts/init-local-env.ps1",
+    "infra:config": "docker compose config --quiet",
+    "infra:up": "docker compose up -d --wait postgres redis minio && docker compose run --rm minio-init",
+    "infra:down": "docker compose down",
+    "infra:ps": "docker compose ps",
+    "infra:logs": "docker compose logs -f --tail=100",
+    "infra:reset": "docker compose down --volumes --remove-orphans",
+    "db:generate": "pnpm --filter @hospital/api prisma:generate",
+    "db:migrate:deploy": "pnpm --filter @hospital/api exec node scripts/prisma.cjs migrate deploy",
+    "db:migrate:dev": "pnpm --filter @hospital/api exec node scripts/prisma.cjs migrate dev",
+    "db:migrate:status": "pnpm --filter @hospital/api exec node scripts/prisma.cjs migrate status"
   },
   "devDependencies": {
     "@eslint/js": "^9.17.0",

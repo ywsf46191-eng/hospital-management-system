@@ -22,9 +22,23 @@ export interface ApiErrorResponse {
 
 export type ApiResponse<T> = ApiSuccessResponse<T> | ApiErrorResponse;
 
+export type HealthComponentName = 'application' | 'database' | 'redis' | 'objectStorage';
+
+export type HealthComponentStatus = 'up' | 'down';
+
+/** Error codes are intentionally generic: health output must never expose hosts or credentials. */
+export type HealthErrorCode = 'UNREACHABLE' | 'TIMEOUT' | 'CHECK_FAILED';
+
+export interface HealthComponentResult {
+  status: HealthComponentStatus;
+  latencyMs: number;
+  error?: HealthErrorCode;
+}
+
 export interface HealthPayload {
   status: HealthStatus;
   service: string;
   timestamp: string;
   version: string;
+  checks: Record<HealthComponentName, HealthComponentResult>;
 }
