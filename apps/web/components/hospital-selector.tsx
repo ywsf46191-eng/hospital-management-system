@@ -1,10 +1,12 @@
 'use client';
 
 import type { MembershipSummary } from '@hospital/types';
-import { Button } from '@hospital/ui';
 import { useState } from 'react';
+import { useI18n } from '@/components/locale-provider';
 import { ErrorText } from '@/components/ui';
-import { apiCall, describeError } from '@/lib/client-api';
+import { Button } from '@/components/ui/button';
+import { apiCall } from '@/lib/client-api';
+import { translateError } from '@/lib/i18n/translate';
 
 export function HospitalSelector({
   memberships,
@@ -15,32 +17,32 @@ export function HospitalSelector({
   activeTenantId: string | null;
   csrfToken: string;
 }) {
+  const { t } = useI18n();
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState<string | null>(null);
 
   async function select(tenantId: string) {
     setPending(tenantId);
     setError(null);
-    // The server validates the membership; the client only names one of its own memberships.
     const result = await apiCall('POST', '/auth/tenant', { body: { tenantId }, csrfToken });
     setPending(null);
     if (result.ok) window.location.assign('/dashboard');
-    else setError(describeError(result.error));
+    else setError(translateError(t, result.error));
   }
 
   return (
     <div className="flex flex-col gap-3">
       {memberships.map((membership) => (
-        <div key={membership.tenantId} className="flex items-center justify-between rounded-lg border border-slate-200 p-3">
+        <div key={membership.tenantId} className="flex items-center justify-between rounded-md border border-border p-3">
           <div>
             <p className="font-medium">{membership.hospital.name}</p>
-            <p className="text-xs text-slate-500">{membership.hospital.code}</p>
+            <p className="text-xs text-muted-foreground">{membership.hospital.code}</p>
           </div>
           {membership.tenantId === activeTenantId ? (
-            <span className="text-sm font-semibold text-emerald-700">Active</span>
+            <span className="text-sm font-semibold text-success">{t('auth.active')}</span>
           ) : (
             <Button onClick={() => select(membership.tenantId)} disabled={pending !== null}>
-              {pending === membership.tenantId ? 'Switching…' : 'Use this hospital'}
+              {pending === membership.tenantId ? t('auth.switching') : t('auth.useHospital')}
             </Button>
           )}
         </div>

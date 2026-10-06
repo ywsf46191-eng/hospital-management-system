@@ -215,6 +215,34 @@ before production.
 
 ---
 
+## 7. Phase 4 Decisions (Design System)
+
+| Field | Value |
+|-------|-------|
+| **ID** | ADP-007 |
+| **Status** | `DECIDED` (2026-10-06) |
+| **Scope** | Phase 4 — Design System |
+
+Numbering is **not** changed: Design System remains Phase 4; Hospital/Tenant Management remains Phase 5.
+
+| Ref | Decision |
+|-----|----------|
+| P4-D0 | Next implementation phase is **Phase 4 — Design System**. Keep the current roadmap numbering exactly as documented after P3-D0. |
+| P4-D1 | UI kit is **shadcn/ui + Tailwind CSS + Lucide**. Tokens are restrained and institutional (navy / white / gray, semantic status colors). No decorative shadcn/marketing defaults (no gradients, glass, neon, or unnecessary animation). |
+| P4-D2 | Locale is a **cookie plus in-memory state** (`en` / `ar`). Persisted user language and hospital language defaults are **deferred to Phase 5**. |
+| P4-D3 | **Self-host** Inter and Noto Sans Arabic in the repository. No Google Fonts and no font CDN at runtime. |
+| P4-D4 | **Restyle all existing Phase 3 pages** onto the design system. Do not change authentication, authorization, CSRF, tenant, or health-page contracts. |
+| P4-D5 | Navigation shows **only implemented routes** the current user is permitted to access. No placeholders or dead links for future modules. |
+| P4-D6 | **One shared institutional theme**. Tenant-specific branding, logos, and configurable colors are **Phase 5**. |
+
+### Deferred to Phase 5 (explicit)
+
+- Hospital settings, branding, `uiProfile`, timezone, currency, number formats, module activation.
+- Persisted `users.locale` / hospital default language.
+- Dark mode (not a government-deployment priority).
+
+---
+
 ## Change Control
 
 When a decision is made:

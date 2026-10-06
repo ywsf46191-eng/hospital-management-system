@@ -16,7 +16,7 @@
     "build:api": "pnpm --filter @hospital/api build",
     "lint": "pnpm -r --filter @hospital/config --filter @hospital/types --filter @hospital/validation --filter @hospital/ui --filter @hospital/web --filter @hospital/api run lint",
     "typecheck": "pnpm build:packages && pnpm -r --filter @hospital/config --filter @hospital/types --filter @hospital/validation --filter @hospital/ui --filter @hospital/web --filter @hospital/api run typecheck",
-    "test": "pnpm build:packages && pnpm --filter @hospital/api test",
+    "test": "pnpm build:packages && pnpm --filter @hospital/api test && pnpm --filter @hospital/web test",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "build:packages": "pnpm -r --filter @hospital/config --filter @hospital/types --filter @hospital/validation --filter @hospital/ui run build",

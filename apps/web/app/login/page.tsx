@@ -1,12 +1,16 @@
 'use client';
 
-import { APP_NAME } from '@hospital/config';
-import { Button } from '@hospital/ui';
 import { type FormEvent, useState } from 'react';
-import { ErrorText, Field } from '@/components/ui';
-import { apiCall, describeError } from '@/lib/client-api';
+import { LanguageSwitcher } from '@/components/language-switcher';
+import { useI18n } from '@/components/locale-provider';
+import { ErrorText } from '@/components/ui';
+import { Button } from '@/components/ui/button';
+import { Field } from '@/components/ui/form';
+import { apiCall } from '@/lib/client-api';
+import { translateError } from '@/lib/i18n/translate';
 
 export default function LoginPage() {
+  const { t } = useI18n();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -20,19 +24,22 @@ export default function LoginPage() {
     setPassword('');
     setPending(false);
     if (result.ok) window.location.assign('/dashboard');
-    else setError(describeError(result.error));
+    else setError(translateError(t, result.error));
   }
 
   return (
     <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center gap-6 px-6">
-      <div className="space-y-1">
-        <p className="text-sm font-semibold uppercase tracking-[0.2em] text-hospital-primary">{APP_NAME}</p>
-        <h1 className="text-2xl font-bold text-hospital-ink">Sign in</h1>
+      <div className="flex items-start justify-between gap-3">
+        <div className="space-y-1">
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">{t('app.name')}</p>
+          <h1 className="text-xl font-semibold">{t('auth.signIn')}</h1>
+        </div>
+        <LanguageSwitcher />
       </div>
-      <form onSubmit={onSubmit} className="flex flex-col gap-4 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-        <Field label="Username" name="username" autoComplete="username" required value={username} onChange={(e) => setUsername(e.target.value)} />
+      <form onSubmit={onSubmit} className="flex flex-col gap-4 rounded-md border border-border bg-surface p-5">
+        <Field label={t('auth.username')} name="username" autoComplete="username" required value={username} onChange={(e) => setUsername(e.target.value)} />
         <Field
-          label="Password"
+          label={t('auth.password')}
           name="password"
           type="password"
           autoComplete="current-password"
@@ -42,12 +49,10 @@ export default function LoginPage() {
         />
         <ErrorText message={error} />
         <Button type="submit" disabled={pending}>
-          {pending ? 'Signing in…' : 'Sign in'}
+          {pending ? t('auth.signingIn') : t('auth.signIn')}
         </Button>
       </form>
-      <p className="text-xs text-slate-500">
-        Forgot your password? Ask your hospital administrator to reset it.
-      </p>
+      <p className="text-xs text-muted-foreground">{t('auth.forgot')}</p>
     </main>
   );
 }

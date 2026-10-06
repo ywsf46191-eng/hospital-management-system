@@ -1,4 +1,4 @@
-# Foundation + infrastructure + authentication verification (Phase 0-3).
+# Foundation + infrastructure + authentication + design-system verification (Phase 0-4).
 # Usage: pnpm verify   (or) powershell -ExecutionPolicy Bypass -File scripts/verify-foundation.ps1
 # Leaves the docker compose infrastructure running; stop it with `pnpm infra:down`.
 

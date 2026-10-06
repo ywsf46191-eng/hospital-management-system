@@ -1,11 +1,13 @@
 'use client';
 
-import { Button } from '@hospital/ui';
+import { Button } from '@/components/ui/button';
+import { useI18n } from '@/components/locale-provider';
 import { useSession } from '@/components/session-context';
 import { apiCall } from '@/lib/client-api';
 
 export function LogoutButton() {
   const { me } = useSession();
+  const { t } = useI18n();
   return (
     <Button
       variant="secondary"
@@ -14,7 +16,7 @@ export function LogoutButton() {
         window.location.assign('/login');
       }}
     >
-      Sign out
+      {t('auth.signOut')}
     </Button>
   );
 }

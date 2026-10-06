@@ -1,11 +1,13 @@
 'use client';
 
-import { Button } from '@hospital/ui';
 import { type FormEvent, useState } from 'react';
+import { useI18n } from '@/components/locale-provider';
 import { useAction, useSession } from '@/components/session-context';
 import { ErrorText, Field } from '@/components/ui';
+import { Button } from '@/components/ui/button';
 
 export function CreateUserForm({ minLength }: { minLength: number }) {
+  const { t } = useI18n();
   const { mutate } = useSession();
   const { pending, error, run } = useAction();
   const [form, setForm] = useState({ username: '', displayName: '', email: '', temporaryPassword: '' });
@@ -32,11 +34,11 @@ export function CreateUserForm({ minLength }: { minLength: number }) {
 
   return (
     <form onSubmit={onSubmit} className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-      <Field label="Username" required value={form.username} onChange={set('username')} autoComplete="off" />
-      <Field label="Display name" required value={form.displayName} onChange={set('displayName')} />
-      <Field label="Email (optional)" type="email" value={form.email} onChange={set('email')} />
+      <Field label={t('auth.username')} required value={form.username} onChange={set('username')} autoComplete="off" />
+      <Field label={t('account.displayName')} required value={form.displayName} onChange={set('displayName')} />
+      <Field label={t('users.emailOptional')} type="email" value={form.email} onChange={set('email')} />
       <Field
-        label={`Temporary password (min ${minLength})`}
+        label={t('users.tempPassword', { min: minLength })}
         type="password"
         required
         minLength={minLength}
@@ -44,11 +46,11 @@ export function CreateUserForm({ minLength }: { minLength: number }) {
         value={form.temporaryPassword}
         onChange={set('temporaryPassword')}
       />
-      <div className="sm:col-span-2 space-y-2">
+      <div className="space-y-2 sm:col-span-2">
         <ErrorText message={error} />
-        {created ? <p className="text-sm text-emerald-700">User {created} created. They must change the password at first sign-in.</p> : null}
+        {created ? <p className="text-sm text-success">{t('users.created', { username: created })}</p> : null}
         <Button type="submit" disabled={pending}>
-          Create user
+          {t('users.create')}
         </Button>
       </div>
     </form>

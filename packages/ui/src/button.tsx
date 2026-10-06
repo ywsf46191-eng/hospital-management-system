@@ -1,50 +1,23 @@
-import type { ButtonHTMLAttributes, CSSProperties, PropsWithChildren } from 'react';
+import type { ButtonHTMLAttributes, PropsWithChildren } from 'react';
 
 export type ButtonVariant = 'primary' | 'secondary' | 'danger';
 
-export interface ButtonProps
-  extends ButtonHTMLAttributes<HTMLButtonElement>,
-    PropsWithChildren {
+export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement>, PropsWithChildren {
   variant?: ButtonVariant;
 }
 
-const variantStyles: Record<ButtonVariant, CSSProperties> = {
-  primary: {
-    background: '#0f4c81',
-    color: '#fff',
-    border: '1px solid #0c3d67',
-  },
-  secondary: {
-    background: '#f3f4f6',
-    color: '#111827',
-    border: '1px solid #d1d5db',
-  },
-  danger: {
-    background: '#b91c1c',
-    color: '#fff',
-    border: '1px solid #991b1b',
-  },
+const variantClass: Record<ButtonVariant, string> = {
+  primary: 'bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] hover:bg-[hsl(var(--primary-hover))]',
+  secondary: 'border border-[hsl(var(--border))] bg-[hsl(var(--surface))] text-[hsl(var(--foreground))]',
+  danger: 'bg-[hsl(var(--destructive))] text-[hsl(var(--destructive-foreground))]',
 };
 
-export function Button({
-  variant = 'primary',
-  children,
-  style,
-  type = 'button',
-  ...props
-}: ButtonProps) {
+/** Institutional button aligned with the Phase 4 tokens (used if imported from @hospital/ui). */
+export function Button({ variant = 'primary', children, className = '', type = 'button', ...props }: ButtonProps) {
   return (
     <button
       type={type}
-      style={{
-        padding: '0.5rem 0.9rem',
-        borderRadius: '0.375rem',
-        fontWeight: 600,
-        cursor: props.disabled ? 'not-allowed' : 'pointer',
-        opacity: props.disabled ? 0.6 : 1,
-        ...variantStyles[variant],
-        ...style,
-      }}
+      className={`inline-flex items-center justify-center rounded-md px-3 py-2 text-sm font-semibold disabled:opacity-50 ${variantClass[variant]} ${className}`}
       {...props}
     >
       {children}

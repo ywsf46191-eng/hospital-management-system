@@ -1,10 +1,12 @@
 'use client';
 
 import type { DepartmentSummary, RoleSummary, TenantUser } from '@hospital/types';
-import { Button } from '@hospital/ui';
 import { type FormEvent, useState } from 'react';
+import { useI18n } from '@/components/locale-provider';
 import { useAction, useSession } from '@/components/session-context';
 import { Card, ErrorText, Field, SelectField, Table, Td } from '@/components/ui';
+import { Button } from '@/components/ui/button';
+import { formatDateTime } from '@/lib/i18n/translate';
 
 export function UserAdminPanel({
   user,
@@ -17,6 +19,7 @@ export function UserAdminPanel({
   departments: DepartmentSummary[];
   isSelf: boolean;
 }) {
+  const { t, locale } = useI18n();
   const { can, mutate, me } = useSession();
   const { pending, error, run } = useAction();
   const [roleId, setRoleId] = useState('');
@@ -29,7 +32,7 @@ export function UserAdminPanel({
   if (isSelf) {
     return (
       <Card>
-        <p className="text-sm text-slate-600">Manage your own account from “My account”. Administrators cannot change their own access.</p>
+        <p className="text-sm text-muted-foreground">{t('users.selfManage')}</p>
       </Card>
     );
   }
@@ -43,7 +46,7 @@ export function UserAdminPanel({
 
   async function resetPassword(event: FormEvent) {
     event.preventDefault();
-    if (await action('POST', `${base}/password-reset`, { temporaryPassword }, 'Password reset. All sessions of this user were signed out.')) {
+    if (await action('POST', `${base}/password-reset`, { temporaryPassword }, t('users.resetPassword'))) {
       setTemporaryPassword('');
     }
   }
@@ -51,24 +54,24 @@ export function UserAdminPanel({
   return (
     <>
       <ErrorText message={error} />
-      {notice ? <p className="mb-4 text-sm text-emerald-700">{notice}</p> : null}
+      {notice ? <p className="mb-4 text-sm text-success">{notice}</p> : null}
 
       {can('user.update') || can('user.disable') ? (
-        <Card title="Access to this hospital">
+        <Card title={t('users.hospitalAccess')}>
           <div className="flex flex-wrap gap-2">
             {user.membershipStatus !== 'ACTIVE' && can('user.update') ? (
               <Button disabled={pending} onClick={() => action('POST', `${base}/activate`)}>
-                Activate
+                {t('users.activate')}
               </Button>
             ) : null}
             {user.membershipStatus === 'ACTIVE' && can('user.disable') ? (
               <Button variant="secondary" disabled={pending} onClick={() => action('POST', `${base}/suspend`)}>
-                Suspend
+                {t('users.suspend')}
               </Button>
             ) : null}
             {user.membershipStatus !== 'DISABLED' && can('user.disable') ? (
-              <Button variant="danger" disabled={pending} onClick={() => action('POST', `${base}/disable`)}>
-                Disable
+              <Button variant="destructive" disabled={pending} onClick={() => action('POST', `${base}/disable`)}>
+                {t('users.disable')}
               </Button>
             ) : null}
           </div>
@@ -76,19 +79,19 @@ export function UserAdminPanel({
       ) : null}
 
       {can('role.read') ? (
-        <Card title="Roles">
-          <Table headers={['Role', 'Department', 'Valid until', '']}>
+        <Card title={t('users.roles')}>
+          <Table headers={[t('users.role'), t('users.department'), t('users.validUntil'), '']}>
             {user.roles.map((assignment) => (
               <tr key={assignment.id}>
                 <Td>
-                  {assignment.role.name} <span className="text-xs text-slate-500">({assignment.role.key})</span>
+                  {assignment.role.name} <span className="text-xs text-muted-foreground">({assignment.role.key})</span>
                 </Td>
-                <Td>{departments.find((department) => department.id === assignment.departmentId)?.name ?? (assignment.departmentId ? '—' : 'All')}</Td>
-                <Td>{assignment.validUntil ? new Date(assignment.validUntil).toLocaleString() : '—'}</Td>
+                <Td>{departments.find((department) => department.id === assignment.departmentId)?.name ?? (assignment.departmentId ? '—' : t('users.allHospital'))}</Td>
+                <Td>{assignment.validUntil ? formatDateTime(assignment.validUntil, locale) : '—'}</Td>
                 <Td>
                   {can('role.assign') ? (
                     <Button variant="secondary" disabled={pending} onClick={() => action('DELETE', `${base}/roles/${assignment.id}`)}>
-                      Remove
+                      {t('users.remove')}
                     </Button>
                   ) : null}
                 </Td>
@@ -103,16 +106,16 @@ export function UserAdminPanel({
                 if (await action('POST', `${base}/roles`, { roleId, ...(roleDepartmentId ? { departmentId: roleDepartmentId } : {}) })) setRoleId('');
               }}
             >
-              <SelectField label="Role" required value={roleId} onChange={(event) => setRoleId(event.target.value)}>
-                <option value="">Select a role…</option>
+              <SelectField label={t('users.role')} required value={roleId} onChange={(event) => setRoleId(event.target.value)}>
+                <option value="">{t('users.selectRole')}</option>
                 {roles.map((role) => (
                   <option key={role.id} value={role.id}>
                     {role.name} ({role.key})
                   </option>
                 ))}
               </SelectField>
-              <SelectField label="Department (optional)" value={roleDepartmentId} onChange={(event) => setRoleDepartmentId(event.target.value)}>
-                <option value="">Whole hospital</option>
+              <SelectField label={t('users.department')} value={roleDepartmentId} onChange={(event) => setRoleDepartmentId(event.target.value)}>
+                <option value="">{t('users.allHospital')}</option>
                 {departments.map((department) => (
                   <option key={department.id} value={department.id}>
                     {department.name}
@@ -120,27 +123,27 @@ export function UserAdminPanel({
                 ))}
               </SelectField>
               <Button type="submit" disabled={pending || !roleId}>
-                Assign role
+                {t('users.assignRole')}
               </Button>
             </form>
           ) : null}
-          <p className="mt-2 text-xs text-slate-500">You can only assign roles whose permissions you hold yourself.</p>
+          <p className="mt-2 text-xs text-muted-foreground">{t('users.escalation')}</p>
         </Card>
       ) : null}
 
-      <Card title="Departments">
+      <Card title={t('users.departments')}>
         <ul className="mb-3 flex flex-wrap gap-2">
           {user.departments.map((department) => (
-            <li key={department.id} className="flex items-center gap-2 rounded border border-slate-200 px-2 py-1 text-sm">
+            <li key={department.id} className="flex items-center gap-2 rounded-md border border-border px-2 py-1 text-sm">
               {department.name}
               {can('user.update') ? (
-                <button type="button" className="text-red-700" disabled={pending} onClick={() => action('DELETE', `${base}/departments/${department.id}`)}>
+                <button type="button" className="text-destructive" disabled={pending} onClick={() => action('DELETE', `${base}/departments/${department.id}`)}>
                   ×
                 </button>
               ) : null}
             </li>
           ))}
-          {user.departments.length === 0 ? <li className="text-sm text-slate-500">No departments.</li> : null}
+          {user.departments.length === 0 ? <li className="text-sm text-muted-foreground">{t('users.noDepartments')}</li> : null}
         </ul>
         {can('user.update') && departments.length > 0 ? (
           <form
@@ -150,8 +153,8 @@ export function UserAdminPanel({
               if (await action('POST', `${base}/departments`, { departmentId })) setDepartmentId('');
             }}
           >
-            <SelectField label="Add department" required value={departmentId} onChange={(event) => setDepartmentId(event.target.value)}>
-              <option value="">Select…</option>
+            <SelectField label={t('users.addDepartment')} required value={departmentId} onChange={(event) => setDepartmentId(event.target.value)}>
+              <option value="">{t('users.select')}</option>
               {departments
                 .filter((department) => !user.departments.some((item) => item.id === department.id))
                 .map((department) => (
@@ -161,17 +164,17 @@ export function UserAdminPanel({
                 ))}
             </SelectField>
             <Button type="submit" disabled={pending || !departmentId}>
-              Add
+              {t('users.add')}
             </Button>
           </form>
         ) : null}
       </Card>
 
       {can('user.password_reset') ? (
-        <Card title="Reset password">
-          <form onSubmit={resetPassword} className="flex flex-col gap-3 sm:max-w-md">
+        <Card title={t('users.resetPassword')}>
+          <form onSubmit={resetPassword} className="flex max-w-md flex-col gap-3">
             <Field
-              label={`Temporary password (min ${me.passwordMinLength})`}
+              label={t('users.tempPassword', { min: me.passwordMinLength })}
               type="password"
               autoComplete="new-password"
               required
@@ -179,10 +182,10 @@ export function UserAdminPanel({
               value={temporaryPassword}
               onChange={(event) => setTemporaryPassword(event.target.value)}
             />
-            <Button type="submit" variant="danger" disabled={pending}>
-              Reset password
+            <Button type="submit" variant="destructive" disabled={pending}>
+              {t('users.resetPassword')}
             </Button>
-            <p className="text-xs text-slate-500">The user must change it at next sign-in. Shared accounts (several hospitals) are reset by a platform administrator.</p>
+            <p className="text-xs text-muted-foreground">{t('users.resetHelp')}</p>
           </form>
         </Card>
       ) : null}

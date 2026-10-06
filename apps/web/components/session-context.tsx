@@ -3,7 +3,9 @@
 import type { AuthMe } from '@hospital/types';
 import { useRouter } from 'next/navigation';
 import { createContext, type ReactNode, useCallback, useContext, useMemo, useState } from 'react';
-import { apiCall, type ClientApiResult, describeError } from '@/lib/client-api';
+import { apiCall, type ClientApiResult } from '@/lib/client-api';
+import { useI18n } from '@/components/locale-provider';
+import { translateError } from '@/lib/i18n/translate';
 
 interface SessionContextValue {
   me: AuthMe;
@@ -38,15 +40,19 @@ export function useSession(): SessionContextValue {
 
 /** Small helper for forms: tracks pending state and the last error message. */
 export function useAction() {
+  const { t } = useI18n();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const run = useCallback(async (action: () => Promise<ClientApiResult<unknown>>) => {
-    setPending(true);
-    setError(null);
-    const result = await action();
-    setPending(false);
-    if (!result.ok) setError(describeError(result.error));
-    return result.ok;
-  }, []);
+  const run = useCallback(
+    async (action: () => Promise<ClientApiResult<unknown>>) => {
+      setPending(true);
+      setError(null);
+      const result = await action();
+      setPending(false);
+      if (!result.ok) setError(translateError(t, result.error));
+      return result.ok;
+    },
+    [t],
+  );
   return { pending, error, run };
 }

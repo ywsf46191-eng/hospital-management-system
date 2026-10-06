@@ -1,26 +1,25 @@
 import Link from 'next/link';
-import { Button } from '@hospital/ui';
-import { APP_NAME } from '@hospital/config';
+import { Button } from '@/components/ui/button';
+import { LanguageSwitcher } from '@/components/language-switcher';
+import { getTranslator } from '@/lib/i18n/server';
 
-export default function HomePage() {
+export default async function HomePage() {
+  const { t } = await getTranslator();
   return (
     <main className="mx-auto flex min-h-screen max-w-3xl flex-col justify-center gap-6 px-6 py-16">
-      <p className="text-sm font-semibold uppercase tracking-[0.2em] text-hospital-primary">
-        Foundation
-      </p>
-      <h1 className="text-4xl font-bold text-hospital-ink">{APP_NAME}</h1>
-      <p className="max-w-2xl text-lg leading-relaxed text-slate-700">
-        Foundation, infrastructure and authentication are online. Specifications in{' '}
-        <code className="rounded bg-white px-1.5 py-0.5 text-sm">docs/</code> are the source of
-        truth. Business modules are not started yet.
-      </p>
+      <div className="flex justify-end">
+        <LanguageSwitcher />
+      </div>
+      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">{t('home.kicker')}</p>
+      <h1 className="text-3xl font-semibold text-foreground">{t('app.name')}</h1>
+      <p className="max-w-2xl text-base leading-relaxed text-muted-foreground">{t('home.intro')}</p>
       <div className="flex flex-wrap gap-3">
-        <Link href="/login">
-          <Button>Sign in</Button>
-        </Link>
-        <Link href="/health">
-          <Button variant="secondary">Open health page</Button>
-        </Link>
+        <Button asChild>
+          <Link href="/login">{t('home.signIn')}</Link>
+        </Button>
+        <Button variant="secondary" asChild>
+          <Link href="/health">{t('home.health')}</Link>
+        </Button>
       </div>
     </main>
   );
