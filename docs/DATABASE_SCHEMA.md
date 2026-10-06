@@ -81,7 +81,8 @@ Most tenant-owned tables must contain:
 ```text
 tenant_id
 ```
-or an equivalent `hospital_id` relation.
+referencing `hospitals.id` (decided in ADP-004: `tenant_id` is the only tenant identifier;
+`hospital_id` must not be used as an interchangeable tenant column).
 The backend must always enforce tenant isolation.
 A user belonging to Hospital A must never access Hospital B data.
 ---
@@ -218,24 +219,35 @@ updated_at
 A hospital can create its own departments.
 ---
 # 9. Users
-Users represent system accounts.
-Suggested fields:
+Users represent system accounts (identities). Decided in Phase 3 (ADP-006 / P3-D3): a user may
+belong to **one or more** hospitals through memberships, so `users` has no `tenant_id`.
+Implemented fields (`users`):
 ```text
 id
-tenant_id
 username
 email
-password_hash
-first_name
-last_name
-phone
-status
+display_name
+status            PENDING | ACTIVE | SUSPENDED | DISABLED
+failed_login_count
+locked_until
 last_login_at
 created_at
 updated_at
 ```
+Memberships (`user_hospital_memberships`):
+```text
+id
+tenant_id
+user_id
+status            ACTIVE | SUSPENDED | DISABLED
+created_at
+updated_at
+```
+The active tenant of a request is the tenant stored in the server-side session, selected from the
+user's own active memberships.
+Credentials are owned by the identity provider (ADP-003). The local provider stores them in
+`user_credentials` (`user_id`, `password_hash` (Argon2id), `must_change`, `password_changed_at`).
 Do not store plaintext passwords.
-Authentication credentials should be handled according to the selected identity-management architecture.
 ---
 # 10. Roles
 Entity:
@@ -298,6 +310,19 @@ User
 └── Department Manager
 ```
 The system must support role assignment without duplicating user accounts.
+Implemented in Phase 3:
+```text
+role_assignments           tenant role assigned within a membership (tenant_id, user_id, role_id,
+                           optional department_id, valid_from, valid_until)
+platform_role_assignments  platform-level roles (no tenant)
+user_departments           department membership (tenant_id, user_id, department_id)
+roles                      tenant_id NULL = read-only system template
+role_permissions           role_id, permission_key, scope
+permissions                code-defined registry synchronized into PostgreSQL
+sessions                   opaque server-side sessions (token hash only)
+audit_logs                 append-only (UPDATE/DELETE/TRUNCATE rejected by triggers)
+```
+See `AUTHENTICATION_AUTHORIZATION.md`.
 ---
 # 13. Staff / Professional Profile
 A system user and a medical professional are not necessarily the same concept.

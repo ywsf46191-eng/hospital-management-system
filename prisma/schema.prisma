@@ -1,8 +1,15 @@
-// Prisma schema — Phase 2 infrastructure foundation.
+// Prisma schema.
 //
-// No domain models yet. Domain schema (Hospital, Patient, Encounter, ...) is
-// intentionally deferred until the tenant field convention is decided:
-// see docs/DATABASE_SCHEMA.md and docs/ARCHITECTURE_DECISIONS_PENDING.md (ADP-004).
+// Phase 2: infrastructure baseline (no models).
+// Phase 3: identity, tenancy, access control, sessions and audit
+//          (docs/AUTHENTICATION_AUTHORIZATION.md, ADP-003/ADP-004/ADP-006).
+//
+// Conventions:
+//   - Tenant-owned tables use the column `tenant_id` (Prisma field `tenantId`) -> hospitals.id.
+//     `hospital_id` is never used as a tenant identifier (ADP-004).
+//   - UUID primary keys, UTC timestamps (timestamptz), snake_case table/column names.
+//   - audit_logs is append-only: UPDATE/DELETE/TRUNCATE are rejected by database triggers
+//     defined in the migration SQL.
 //
 // Commands (run from the repository root):
 //   pnpm db:generate         generate Prisma Client for apps/api
@@ -16,4 +23,309 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+enum HospitalType {
+  GOVERNMENT
+  PRIVATE
+  NON_PROFIT
+}
+
+enum HospitalStatus {
+  ACTIVE
+  SUSPENDED
+  ARCHIVED
+}
+
+enum DepartmentStatus {
+  ACTIVE
+  DISABLED
+}
+
+enum UserStatus {
+  PENDING
+  ACTIVE
+  SUSPENDED
+  DISABLED
+}
+
+enum MembershipStatus {
+  ACTIVE
+  SUSPENDED
+  DISABLED
+}
+
+enum RoleLevel {
+  PLATFORM
+  TENANT
+}
+
+enum RoleStatus {
+  ACTIVE
+  DISABLED
+}
+
+enum PermissionLevel {
+  PLATFORM
+  TENANT
+  ANY
+}
+
+enum PermissionScope {
+  GLOBAL
+  HOSPITAL
+  DEPARTMENT
+  WARD
+  ASSIGNED_PATIENT
+  OWN_RECORD
+}
+
+enum AuditResult {
+  SUCCESS
+  FAILURE
+  DENIED
+}
+
+enum AuditActorType {
+  USER
+  SYSTEM
+  ANONYMOUS
+}
+
+/// The tenant. Minimal identity fields only; settings/branding/modules belong to Phase 5.
+model Hospital {
+  id        String         @id @default(uuid()) @db.Uuid
+  code      String         @unique
+  name      String
+  type      HospitalType
+  status    HospitalStatus @default(ACTIVE)
+  createdAt DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime       @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  departments     Department[]
+  memberships     UserHospitalMembership[]
+  roles           Role[]
+  roleAssignments RoleAssignment[]
+  sessions        Session[]
+
+  @@map("hospitals")
+}
+
+model Department {
+  id        String           @id @default(uuid()) @db.Uuid
+  tenantId  String           @map("tenant_id") @db.Uuid
+  code      String
+  name      String
+  status    DepartmentStatus @default(ACTIVE)
+  createdAt DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime         @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  hospital        Hospital         @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  userDepartments UserDepartment[]
+  roleAssignments RoleAssignment[]
+
+  @@unique([tenantId, code])
+  @@unique([tenantId, id])
+  @@map("departments")
+}
+
+/// A global identity. Tenant access is granted only through memberships.
+model User {
+  id               String     @id @default(uuid()) @db.Uuid
+  username         String     @unique
+  email            String?    @unique
+  displayName      String     @map("display_name")
+  status           UserStatus @default(ACTIVE)
+  failedLoginCount Int        @default(0) @map("failed_login_count")
+  lockedUntil      DateTime?  @map("locked_until") @db.Timestamptz(3)
+  lastLoginAt      DateTime?  @map("last_login_at") @db.Timestamptz(3)
+  createdAt        DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime   @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  credential              UserCredential?
+  memberships             UserHospitalMembership[]
+  sessions                Session[]
+  platformRoleAssignments PlatformRoleAssignment[]
+
+  @@map("users")
+}
+
+/// Owned by the local identity provider (ADP-003). An external provider would not use this table.
+model UserCredential {
+  userId            String   @id @map("user_id") @db.Uuid
+  passwordHash      String   @map("password_hash")
+  mustChange        Boolean  @default(true) @map("must_change")
+  passwordChangedAt DateTime @default(now()) @map("password_changed_at") @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_credentials")
+}
+
+model UserHospitalMembership {
+  id        String           @id @default(uuid()) @db.Uuid
+  tenantId  String           @map("tenant_id") @db.Uuid
+  userId    String           @map("user_id") @db.Uuid
+  status    MembershipStatus @default(ACTIVE)
+  createdAt DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime         @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  hospital        Hospital         @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  departments     UserDepartment[]
+  roleAssignments RoleAssignment[]
+
+  @@unique([tenantId, userId])
+  @@index([userId])
+  @@map("user_hospital_memberships")
+}
+
+model UserDepartment {
+  id           String   @id @default(uuid()) @db.Uuid
+  tenantId     String   @map("tenant_id") @db.Uuid
+  userId       String   @map("user_id") @db.Uuid
+  departmentId String   @map("department_id") @db.Uuid
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  // Composite foreign keys keep the membership and the department in the same tenant.
+  membership UserHospitalMembership @relation(fields: [tenantId, userId], references: [tenantId, userId], onDelete: Cascade)
+  department Department             @relation(fields: [tenantId, departmentId], references: [tenantId, id], onDelete: Restrict)
+
+  @@unique([tenantId, userId, departmentId])
+  @@map("user_departments")
+}
+
+/// Code-defined permission registry, synchronized at API startup. Never edited through the API.
+model Permission {
+  key         String          @id
+  module      String
+  level       PermissionLevel
+  description String
+  isActive    Boolean         @default(true) @map("is_active")
+  updatedAt   DateTime        @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  rolePermissions RolePermission[]
+
+  @@map("permissions")
+}
+
+/// tenantId NULL = read-only system template (synchronized from code). Tenant roles are custom.
+model Role {
+  id          String     @id @default(uuid()) @db.Uuid
+  tenantId    String?    @map("tenant_id") @db.Uuid
+  key         String
+  name        String
+  description String?
+  level       RoleLevel
+  isSystem    Boolean    @default(false) @map("is_system")
+  status      RoleStatus @default(ACTIVE)
+  createdAt   DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime   @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  hospital                Hospital?                @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  permissions             RolePermission[]
+  assignments             RoleAssignment[]
+  platformRoleAssignments PlatformRoleAssignment[]
+
+  // The migration creates this index with NULLS NOT DISTINCT so template keys are unique too.
+  @@unique([tenantId, key])
+  @@map("roles")
+}
+
+model RolePermission {
+  roleId        String          @map("role_id") @db.Uuid
+  permissionKey String          @map("permission_key")
+  scope         PermissionScope @default(HOSPITAL)
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionKey], references: [key], onDelete: Restrict)
+
+  @@id([roleId, permissionKey])
+  @@map("role_permissions")
+}
+
+/// A tenant role granted within a membership. Grants nothing outside that tenant.
+model RoleAssignment {
+  id           String    @id @default(uuid()) @db.Uuid
+  tenantId     String    @map("tenant_id") @db.Uuid
+  userId       String    @map("user_id") @db.Uuid
+  roleId       String    @map("role_id") @db.Uuid
+  departmentId String?   @map("department_id") @db.Uuid
+  validFrom    DateTime  @default(now()) @map("valid_from") @db.Timestamptz(3)
+  validUntil   DateTime? @map("valid_until") @db.Timestamptz(3)
+  assignedById String?   @map("assigned_by_id") @db.Uuid
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  hospital   Hospital               @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  membership UserHospitalMembership @relation(fields: [tenantId, userId], references: [tenantId, userId], onDelete: Cascade)
+  role       Role                   @relation(fields: [roleId], references: [id], onDelete: Restrict)
+  department Department?            @relation(fields: [departmentId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId, userId])
+  @@index([roleId])
+  @@map("role_assignments")
+}
+
+model PlatformRoleAssignment {
+  id           String   @id @default(uuid()) @db.Uuid
+  userId       String   @map("user_id") @db.Uuid
+  roleId       String   @map("role_id") @db.Uuid
+  assignedById String?  @map("assigned_by_id") @db.Uuid
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [roleId], references: [id], onDelete: Restrict)
+
+  @@unique([userId, roleId])
+  @@map("platform_role_assignments")
+}
+
+/// Opaque server-side session. Only the SHA-256 hash of the token is stored.
+model Session {
+  id                String    @id @default(uuid()) @db.Uuid
+  userId            String    @map("user_id") @db.Uuid
+  tenantId          String?   @map("tenant_id") @db.Uuid
+  tokenHash         String    @unique @map("token_hash")
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  lastSeenAt        DateTime  @default(now()) @map("last_seen_at") @db.Timestamptz(3)
+  idleExpiresAt     DateTime  @map("idle_expires_at") @db.Timestamptz(3)
+  absoluteExpiresAt DateTime  @map("absolute_expires_at") @db.Timestamptz(3)
+  revokedAt         DateTime? @map("revoked_at") @db.Timestamptz(3)
+  revokeReason      String?   @map("revoke_reason")
+  mfaVerifiedAt     DateTime? @map("mfa_verified_at") @db.Timestamptz(3)
+  ipAddress         String?   @map("ip_address")
+  userAgent         String?   @map("user_agent")
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  hospital Hospital? @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+/// Append-only. No foreign keys so audit history never depends on (or blocks) other records.
+model AuditLog {
+  id           String         @id @default(uuid()) @db.Uuid
+  occurredAt   DateTime       @default(now()) @map("occurred_at") @db.Timestamptz(3)
+  tenantId     String?        @map("tenant_id") @db.Uuid
+  actorType    AuditActorType @map("actor_type")
+  actorUserId  String?        @map("actor_user_id") @db.Uuid
+  action       String
+  category     String
+  resourceType String?        @map("resource_type")
+  resourceId   String?        @map("resource_id")
+  result       AuditResult
+  reason       String?
+  requestId    String?        @map("request_id")
+  sessionId    String?        @map("session_id") @db.Uuid
+  ipAddress    String?        @map("ip_address")
+  userAgent    String?        @map("user_agent")
+  beforeData   Json?          @map("before_data")
+  afterData    Json?          @map("after_data")
+  metadata     Json?
+
+  @@index([tenantId, occurredAt])
+  @@index([actorUserId, occurredAt])
+  @@index([action])
+  @@map("audit_logs")
 }

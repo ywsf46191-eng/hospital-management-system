@@ -29,6 +29,21 @@ const envSchema = z.object({
   MINIO_BUCKET: z
     .string()
     .regex(/^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$/, 'must be a valid S3 bucket name'),
+  TRUST_PROXY: z.string().default('loopback'),
+  AUTH_PROVIDER: z.enum(['local']).default('local'),
+  AUTH_MFA_MODE: z.enum(['disabled']).default('disabled'),
+  AUTH_PASSWORD_MIN_LENGTH: z.coerce.number().int().min(12).max(128).default(12),
+  AUTH_LOCKOUT_THRESHOLD: z.coerce.number().int().min(1).max(100).default(5),
+  AUTH_LOCKOUT_DURATION_MINUTES: z.coerce.number().int().min(1).max(1440).default(15),
+  AUTH_RATE_LIMIT_WINDOW_SECONDS: z.coerce.number().int().min(1).max(86_400).default(900),
+  AUTH_RATE_LIMIT_MAX_PER_IP: z.coerce.number().int().min(1).default(100),
+  AUTH_RATE_LIMIT_MAX_PER_USERNAME: z.coerce.number().int().min(1).default(20),
+  SESSION_IDLE_TIMEOUT_MINUTES: z.coerce.number().int().min(1).max(1440).default(30),
+  SESSION_ABSOLUTE_LIFETIME_HOURS: z.coerce.number().int().min(1).max(168).default(12),
+  SESSION_COOKIE_SECURE: z
+    .enum(['true', 'false'])
+    .default('true')
+    .transform((value) => value === 'true'),
 });
 
 export interface AppConfig {
@@ -45,6 +60,28 @@ export interface AppConfig {
     secretKey: string;
     bucket: string;
   };
+  /** Express `trust proxy` setting: false, a hop count, or a list of trusted addresses/subnets. */
+  trustProxy: boolean | number | string;
+  auth: {
+    provider: 'local';
+    mfaMode: 'disabled';
+    passwordMinLength: number;
+    lockoutThreshold: number;
+    lockoutDurationMs: number;
+    rateLimit: { windowSeconds: number; maxPerIp: number; maxPerUsername: number };
+  };
+  session: {
+    idleTimeoutMs: number;
+    absoluteLifetimeMs: number;
+    cookieSecure: boolean;
+  };
+}
+
+function parseTrustProxy(value: string): boolean | number | string {
+  if (value === 'false') return false;
+  if (value === 'true') return true;
+  if (/^\d+$/.test(value)) return Number(value);
+  return value;
 }
 
 export class ConfigValidationError extends Error {
@@ -62,6 +99,9 @@ export function parseAppConfig(env: NodeJS.ProcessEnv): AppConfig {
     throw new ConfigValidationError(keys);
   }
   const value = result.data;
+  if (value.NODE_ENV === 'production' && !value.SESSION_COOKIE_SECURE) {
+    throw new ConfigValidationError(['SESSION_COOKIE_SECURE']);
+  }
   return {
     nodeEnv: value.NODE_ENV,
     apiPort: value.API_PORT,
@@ -77,6 +117,24 @@ export function parseAppConfig(env: NodeJS.ProcessEnv): AppConfig {
       accessKey: value.MINIO_ACCESS_KEY,
       secretKey: value.MINIO_SECRET_KEY,
       bucket: value.MINIO_BUCKET,
+    },
+    trustProxy: parseTrustProxy(value.TRUST_PROXY),
+    auth: {
+      provider: value.AUTH_PROVIDER,
+      mfaMode: value.AUTH_MFA_MODE,
+      passwordMinLength: value.AUTH_PASSWORD_MIN_LENGTH,
+      lockoutThreshold: value.AUTH_LOCKOUT_THRESHOLD,
+      lockoutDurationMs: value.AUTH_LOCKOUT_DURATION_MINUTES * 60_000,
+      rateLimit: {
+        windowSeconds: value.AUTH_RATE_LIMIT_WINDOW_SECONDS,
+        maxPerIp: value.AUTH_RATE_LIMIT_MAX_PER_IP,
+        maxPerUsername: value.AUTH_RATE_LIMIT_MAX_PER_USERNAME,
+      },
+    },
+    session: {
+      idleTimeoutMs: value.SESSION_IDLE_TIMEOUT_MINUTES * 60_000,
+      absoluteLifetimeMs: value.SESSION_ABSOLUTE_LIFETIME_HOURS * 3_600_000,
+      cookieSecure: value.SESSION_COOKIE_SECURE,
     },
   };
 }

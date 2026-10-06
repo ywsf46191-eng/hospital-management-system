@@ -1,4 +1,4 @@
-# Foundation + infrastructure verification (Phase 0-2).
+# Foundation + infrastructure + authentication verification (Phase 0-3).
 # Usage: pnpm verify   (or) powershell -ExecutionPolicy Bypass -File scripts/verify-foundation.ps1
 # Leaves the docker compose infrastructure running; stop it with `pnpm infra:down`.
 
@@ -48,7 +48,7 @@ Invoke-Step 'build (packages, api, web)' { pnpm build }
 Invoke-Step 'unit tests' { pnpm test }
 
 $dockerAvailable = [bool](Get-Command docker -ErrorAction SilentlyContinue)
-$infraSteps = @('docker compose config', 'docker compose up', 'migrations', 'integration tests (API -> PostgreSQL/Redis/MinIO)', 'api health', 'web health')
+$infraSteps = @('docker compose config', 'docker compose up', 'migrations', 'integration tests (API -> PostgreSQL/Redis/MinIO)', 'api health', 'health endpoints remain public', 'API default-deny without a session', 'web health')
 
 if (-not $dockerAvailable) {
   foreach ($step in $infraSteps) { Skip-Step $step 'docker is not installed' }
@@ -74,6 +74,23 @@ if (-not $dockerAvailable) {
         if ($check.status -ne 'up') { throw "$name is $($check.status) ($($check.error))" }
         Write-Host ("  {0,-14} up ({1} ms)" -f $name, $check.latencyMs)
       }
+    }
+    Invoke-Step 'health endpoints remain public' {
+      $live = Invoke-WebRequest -Uri 'http://localhost:4000/api/v1/health/live' -UseBasicParsing -TimeoutSec 10
+      if ($live.StatusCode -ne 200) { throw "health/live returned $($live.StatusCode)" }
+      $health = Invoke-WebRequest -Uri 'http://localhost:4000/api/v1/health' -UseBasicParsing -TimeoutSec 10
+      if ($health.StatusCode -ne 200) { throw "health returned $($health.StatusCode)" }
+    }
+    Invoke-Step 'API default-deny without a session' {
+      $denied = $false
+      try {
+        Invoke-WebRequest -Uri 'http://localhost:4000/api/v1/users' -UseBasicParsing -TimeoutSec 10 | Out-Null
+      } catch {
+        $code = $_.Exception.Response.StatusCode.value__
+        if ($code -ne 401) { throw "GET /users returned $code (expected 401)" }
+        $denied = $true
+      }
+      if (-not $denied) { throw 'GET /users succeeded without a session' }
     }
 
     $web = Start-Process -FilePath 'pnpm.cmd' -ArgumentList '--filter', '@hospital/web', 'start' -PassThru -WindowStyle Hidden

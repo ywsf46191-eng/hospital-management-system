@@ -166,6 +166,7 @@ Container-level healthchecks: `pg_isready` (postgres), `redis-cli ping` (redis),
 | Migration status             | `pnpm db:migrate:status` |
 | Unit tests                   | `pnpm test` |
 | Connectivity tests           | `pnpm test:integration` (infrastructure must be running) |
+| First platform administrator | `pnpm auth:bootstrap` (interactive TTY; refuses a second admin) |
 | Full verification            | `pnpm verify` |
 
 ### Deleting data (development only)
@@ -182,9 +183,10 @@ environment that holds real data. After a reset, run `pnpm infra:up` and `pnpm d
 ## 7. Migrations
 
 - Schema: `prisma/schema.prisma` (shared). Migrations: `prisma/migrations/`.
-- Phase 2 contains only a **baseline** migration that establishes migration history; no domain tables.
-- Create migrations with `pnpm db:migrate:dev` (development database only); apply with `pnpm db:migrate:deploy`.
-- Follow the migration rules in `CURSOR_MASTER_INSTRUCTIONS.md` §25 and §63 (review impact, test, document destructive operations).
+- Phase 2 contains a **baseline** migration. Phase 3 adds `20261006000000_phase3_identity_access` (identity, sessions, RBAC, append-only audit). Apply with `pnpm db:migrate:deploy`.
+- Create later migrations with `pnpm db:migrate:dev` (development database only).
+- Integration tests for authentication create and migrate a disposable `<POSTGRES_DB>_test` database so they never seed a platform administrator into the development database. `pnpm auth:bootstrap` remains usable on the local stack.
+- Follow the migration rules in `CURSOR_MASTER_INSTRUCTIONS.md` §25 and §63.
 
 ---
 

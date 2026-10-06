@@ -22,6 +22,7 @@
     "build:packages": "pnpm -r --filter @hospital/config --filter @hospital/types --filter @hospital/validation --filter @hospital/ui run build",
     "verify": "powershell -ExecutionPolicy Bypass -File scripts/verify-foundation.ps1",
     "test:integration": "pnpm build:packages && pnpm --filter @hospital/api test:integration",
+    "auth:bootstrap": "pnpm build:packages && pnpm --filter @hospital/api auth:bootstrap",
     "env:init": "powershell -ExecutionPolicy Bypass -File scripts/init-local-env.ps1",
     "infra:config": "docker compose config --quiet",
     "infra:up": "docker compose up -d --wait postgres redis minio && docker compose run --rm minio-init",

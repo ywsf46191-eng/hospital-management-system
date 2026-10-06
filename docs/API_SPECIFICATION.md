@@ -128,15 +128,12 @@ instead of blindly deleting records.
 ---
 # 7. Authentication
 All protected endpoints require authentication.
-Example:
-```text
-Authorization: Bearer <access_token>
-```
-Authentication may be implemented through:
-* Keycloak
-* Auth.js
-* Another approved identity provider
-The final implementation must follow the authentication architecture selected for the project.
+Decided in Phase 3 (ADP-003, ADP-006 / P3-D4): browser clients authenticate with an **opaque
+server-side session** carried in a Secure + HttpOnly + SameSite cookie. State-changing requests
+must also send the session's CSRF token in the `X-CSRF-Token` header. Bearer tokens are not used
+by the web application; non-human service accounts will receive a separate mechanism later.
+Identity is application-managed (Argon2id) behind an `IdentityProvider` interface so that
+Keycloak or another approved identity provider can replace it later.
 ---
 # 8. Authentication Flow
 Conceptually:
@@ -181,11 +178,12 @@ Refer to:
 for the authorization model.
 ---
 # 10. Tenant Identification
-The API must never trust a user-provided `hospital_id` as the sole tenant security mechanism.
+The API must never trust a user-provided `tenant_id` (or any hospital identifier) as the tenant
+security mechanism. The tenant identifier is `tenant_id` (ADP-004).
 Incorrect:
 ```json
 {
-"hospital_id": "hospital-b"
+"tenant_id": "hospital-b"
 }
 ```
 and assuming that the user is authorized.

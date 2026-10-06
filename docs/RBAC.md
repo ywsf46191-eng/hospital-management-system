@@ -86,7 +86,7 @@ Hospital B
 └── Receptionist B
 Doctor A must never access Hospital B data.
 Even if Doctor A manually changes:
-hospital_id=HospitalB
+tenant_id=HospitalB
 in an API request, the server must reject the request.
 The server must derive tenant context from the authenticated identity and authorized session.
 5. Authorization Layers

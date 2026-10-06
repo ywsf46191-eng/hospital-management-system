@@ -1,8 +1,11 @@
 import { Controller, Get, HttpStatus, Res } from '@nestjs/common';
 import type { ApiSuccessResponse, HealthPayload } from '@hospital/types';
 import type { Response } from 'express';
+import { Public } from '../modules/access-control/decorators';
 import { HealthService } from './health.service';
 
+/** Public by design: probes and the web health page call it without a session. */
+@Public()
 @Controller('health')
 export class HealthController {
   constructor(private readonly healthService: HealthService) {}

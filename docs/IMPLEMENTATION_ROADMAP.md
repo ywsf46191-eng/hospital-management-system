@@ -103,7 +103,35 @@ Monitoring
 Logs
 ```
 ---
-# 6. Phase 3 — Design System
+# 6. Phase 3 — Authentication & Authorization
+Renumbered 2026-10-06 (ADP-006 / P3-D0): the former Phase 4 (Authentication) and Phase 5
+(Authorization) are implemented together as Phase 3, before the Design System. Only minimal
+authentication/administration UI is built in this phase.
+Authentication:
+* Login
+* Logout
+* Session management
+* Password handling
+* MFA-ready architecture
+* Admin-initiated password reset (self-service reset requires Notifications)
+* User status
+* Account lockout controls
+Authorization:
+* Users
+* Roles
+* Permissions
+* Scopes
+* Tenant isolation
+* Department scope
+* Audit
+Use the permission architecture from:
+```text
+RBAC.md
+ROLES_PERMISSIONS_MATRIX.md
+AUTHENTICATION_AUTHORIZATION.md
+```
+---
+# 7. Phase 4 — Design System
 Before building modules, create:
 * Colors
 * Typography
@@ -126,32 +154,7 @@ Arabic RTL
 English LTR
 ```
 ---
-# 7. Phase 4 — Authentication
-Implement:
-* Login
-* Logout
-* Session management
-* Password handling
-* MFA-ready architecture
-* Password reset
-* User status
-* Account lockout controls
----
-# 8. Phase 5 — Authorization
-Implement:
-* Users
-* Roles
-* Permissions
-* Scopes
-* Tenant isolation
-* Department scope
-* Audit
-Use the permission architecture from:
-```text
-ROLES_PERMISSIONS_MATRIX.md
-```
----
-# 9. Phase 6 — Hospital/Tenant Management
+# 8. Phase 5 — Hospital/Tenant Management
 Implement:
 * Hospitals
 * Hospital settings
@@ -171,7 +174,7 @@ PRIVATE
 NON_PROFIT
 ```
 ---
-# 10. Phase 7 — Core Patient Management
+# 9. Phase 6 — Core Patient Management
 Implement:
 * Patient registration
 * Patient number
@@ -185,7 +188,7 @@ Implement:
 * Merge workflow
 This is the central foundation.
 ---
-# 11. Phase 8 — Reception & Appointments
+# 10. Phase 7 — Reception & Appointments
 Implement:
 * Appointment types
 * Schedules
@@ -197,7 +200,7 @@ Implement:
 * Queue
 * Waiting room
 ---
-# 12. Phase 9 — Clinical Core
+# 11. Phase 8 — Clinical Core
 Implement:
 * Encounters
 * Clinical notes
@@ -210,7 +213,7 @@ Implement:
 * Follow-up
 * Referrals
 ---
-# 13. Phase 10 — Emergency
+# 12. Phase 9 — Emergency
 Implement:
 * Emergency registration
 * Triage
@@ -224,7 +227,7 @@ Implement:
 * Referral
 * Discharge
 ---
-# 14. Phase 11 — Inpatient
+# 13. Phase 10 — Inpatient
 Implement:
 * Wards
 * Rooms
@@ -235,7 +238,7 @@ Implement:
 * Discharge
 * Inpatient timeline
 ---
-# 15. Phase 12 — Nursing
+# 14. Phase 11 — Nursing
 Implement:
 * Nursing assignments
 * Vitals
@@ -245,7 +248,7 @@ Implement:
 * Medication administration
 * Handover
 ---
-# 16. Phase 13 — Laboratory
+# 15. Phase 12 — Laboratory
 Implement:
 * Lab catalog
 * Lab orders
@@ -257,7 +260,7 @@ Implement:
 * Critical results
 * Printing
 ---
-# 17. Phase 14 — Radiology
+# 16. Phase 13 — Radiology
 Implement:
 * Radiology catalog
 * Orders
@@ -269,7 +272,7 @@ Implement:
 * Approval
 Start with integration-ready architecture even if a real PACS is not available during development.
 ---
-# 18. Phase 15 — Pharmacy
+# 17. Phase 14 — Pharmacy
 Implement:
 * Medication catalog
 * Prescription
@@ -280,7 +283,7 @@ Implement:
 * Pharmacy stock
 * Medication history
 ---
-# 19. Phase 16 — Surgery
+# 18. Phase 15 — Surgery
 Implement:
 * Surgical requests
 * Pre-op
@@ -292,7 +295,7 @@ Implement:
 * Post-op
 * Discharge
 ---
-# 20. Phase 17 — Blood Bank
+# 19. Phase 16 — Blood Bank
 Implement:
 * Blood products
 * Units
@@ -303,7 +306,7 @@ Implement:
 * Transfusion
 * Reactions
 ---
-# 21. Phase 18 — Inventory
+# 20. Phase 17 — Inventory
 Implement:
 * Items
 * Categories
@@ -316,7 +319,7 @@ Implement:
 * Expiry
 * Stock counts
 ---
-# 22. Phase 19 — Procurement
+# 21. Phase 18 — Procurement
 Implement:
 ```text
 Purchase Request
@@ -332,7 +335,7 @@ Goods Receipt
 Inventory
 ```
 ---
-# 23. Phase 20 — Finance
+# 22. Phase 19 — Finance
 Implement when enabled:
 * Services
 * Price lists
@@ -344,7 +347,7 @@ Implement when enabled:
 * Financial reports
 Finance MUST remain configurable per hospital.
 ---
-# 24. Phase 21 — Insurance
+# 23. Phase 20 — Insurance
 Implement:
 * Providers
 * Plans
@@ -355,7 +358,7 @@ Implement:
 * Claim status
 * Settlement
 ---
-# 25. Phase 22 — HR
+# 24. Phase 21 — HR
 Implement:
 * Employees
 * Employment
@@ -364,7 +367,7 @@ Implement:
 * Payroll records
 * HR documents
 ---
-# 26. Phase 23 — Notifications
+# 25. Phase 22 — Notifications
 Implement:
 * Internal notifications
 * Email
@@ -375,7 +378,7 @@ Implement:
 * Delivery status
 * Webhooks
 ---
-# 27. Phase 24 — Reporting
+# 26. Phase 23 — Reporting
 Implement:
 * Role dashboards
 * Operational reports
@@ -387,7 +390,7 @@ Implement:
 * Export
 * Audit
 ---
-# 28. Phase 25 — Synchronization
+# 27. Phase 24 — Synchronization
 Only after local workflows are stable.
 Implement:
 ```text
@@ -414,7 +417,7 @@ Features:
 * Dead-letter queue
 * Monitoring
 ---
-# 29. Phase 26 — Offline Mode
+# 28. Phase 25 — Offline Mode
 Validate:
 ```text
 Internet OFF
@@ -432,7 +435,7 @@ Critical workflows:
 * Inventory
 Cloud-only features should clearly indicate unavailable status.
 ---
-# 30. Phase 27 — Security Hardening
+# 29. Phase 26 — Security Hardening
 Implement/review:
 * MFA
 * RBAC
@@ -447,7 +450,7 @@ Implement/review:
 * Network segmentation guidance
 Perform security testing.
 ---
-# 31. Phase 28 — Performance
+# 30. Phase 27 — Performance
 Test:
 * Database
 * API
@@ -458,7 +461,7 @@ Test:
 * Concurrent users
 Add indexes based on measured query patterns.
 ---
-# 32. Phase 29 — Backup & Disaster Recovery
+# 31. Phase 28 — Backup & Disaster Recovery
 Implement:
 ```text
 Primary Server
@@ -478,7 +481,7 @@ Document:
 * Database restoration
 * File restoration
 ---
-# 33. Phase 30 — Production Deployment
+# 32. Phase 29 — Production Deployment
 Production environment should include:
 ```text
 Firewall
@@ -497,7 +500,7 @@ Monitoring
 ```
 Use secure TLS certificates and production secrets.
 ---
-# 34. Phase 31 — Pilot Hospital
+# 33. Phase 30 — Pilot Hospital
 Before broad deployment:
 1. Select pilot hospital.
 2. Configure hospital profile.
@@ -511,7 +514,7 @@ Before broad deployment:
 10. Fix and document.
 11. Repeat validation.
 ---
-# 35. Phase 32 — Production Launch
+# 34. Phase 31 — Production Launch
 Launch checklist:
 * Backup verified
 * Restore tested
@@ -527,7 +530,7 @@ Launch checklist:
 * Training completed
 * Support process established
 ---
-# 36. Phase 33 — Post-Launch
+# 35. Phase 32 — Post-Launch
 Monitor:
 * Errors
 * API latency
@@ -540,7 +543,7 @@ Monitor:
 * Failed notifications
 * Security events
 ---
-# 37. Release Strategy
+# 36. Release Strategy
 Use semantic versioning:
 ```text
 MAJOR.MINOR.PATCH
@@ -553,7 +556,7 @@ Example:
 ```
 Database migrations MUST be version-controlled.
 ---
-# 38. Feature Development Cycle
+# 37. Feature Development Cycle
 Every feature follows:
 ```text
 Requirement
@@ -577,7 +580,7 @@ Review
 Deployment
 ```
 ---
-# 39. Cursor Working Method
+# 38. Cursor Working Method
 Cursor MUST NOT work blindly.
 For every feature:
 ### Step 1
@@ -605,7 +608,7 @@ Update documentation.
 ### Step 12
 Report changes.
 ---
-# 40. Cursor Must Stop and Ask Before
+# 39. Cursor Must Stop and Ask Before
 Cursor should stop before:
 * Changing architecture
 * Changing database strategy
@@ -620,7 +623,7 @@ Cursor should stop before:
 * Making irreversible data migrations
 * Adding external services with major cost/security implications
 ---
-# 41. No Big-Bang Implementation
+# 40. No Big-Bang Implementation
 Never request:
 ```text
 Build the entire hospital system now.
@@ -636,7 +639,7 @@ Review.
 Proceed.
 ```
 ---
-# 42. Definition of Done
+# 41. Definition of Done
 A phase is complete only when:
 * Implementation exists
 * Database changes are migrated
@@ -651,7 +654,7 @@ A phase is complete only when:
 * Documentation is updated
 * No known critical regression exists
 ---
-# 43. Final Product Goal
+# 42. Final Product Goal
 The final system should be:
 ```text
 Modular
@@ -668,7 +671,7 @@ Enterprise-Grade
 ```
 The system should operate as one coherent hospital platform rather than a collection of disconnected applications.
 ---
-# 44. Implementation Priority
+# 43. Implementation Priority
 Priority order:
 ```text
 P0
@@ -703,7 +706,7 @@ AI-assisted features
 ```
 P3 features MUST NOT compromise the reliability of P0/P1 workflows.
 ---
-# 45. Final Cursor Directive
+# 44. Final Cursor Directive
 Cursor should treat all documents in:
 ```text
 /docs

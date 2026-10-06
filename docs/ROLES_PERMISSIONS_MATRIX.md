@@ -56,7 +56,11 @@ A user from Hospital A MUST NEVER access Hospital B data unless explicitly autho
 Cross-tenant access MUST be extremely restricted and audited.
 ---
 # 4. Permission Naming Convention
-Permissions should use:
+**Superseded (ADP-006 / P3-D5):** permissions use `<resource>.<action>` with `read`, as defined in
+`RBAC.md` §34 (e.g. `patient.read`, `lab.result.approve`). The `<module>.<resource>.<action>` /
+`view` examples below are kept for history only; the code-defined permission registry is
+authoritative.
+Original proposal:
 ```text
 <module>.<resource>.<action>
 ```

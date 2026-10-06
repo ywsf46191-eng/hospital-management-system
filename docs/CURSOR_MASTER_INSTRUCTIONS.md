@@ -139,6 +139,8 @@ Prefer:
 Keycloak
 ```
 or the approved project authentication architecture.
+Approved (ADP-003): application-managed authentication (Argon2id) behind an `IdentityProvider`
+interface; Keycloak may replace the local provider later.
 ---
 # 6. REPOSITORY STRUCTURE
 Maintain the project structure:
@@ -305,7 +307,7 @@ Never trust client-provided authorization information.
 Never trust:
 ```text
 role
-hospitalId
+tenantId
 userId
 permissions
 ```

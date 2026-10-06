@@ -307,7 +307,7 @@ Correct Scope
 ```text
 Authenticated User
 ↓
-Hospital ID
+Session (active membership → tenant_id)
 ↓
 Request Context
 ↓
@@ -317,7 +317,7 @@ Database Query
 ```
 لا يجب السماح للمستخدم بتحديد:
 ```text
-hospitalId=another-hospital
+tenant_id=another-hospital
 ```
 والاعتماد على القيمة القادمة من Frontend فقط.
 Tenant يجب أن يأتي من Context موثوق.

@@ -17,7 +17,7 @@ Do **not** change Modular Monolith, Multi-Tenancy, Offline-First, On-Prem + Clou
 | **ID** | ADP-001 |
 | **Status** | `PENDING DECISION` |
 | **Discovered** | Phase 0 repository inspection |
-| **Blocking for** | Phase 24 — Reporting |
+| **Blocking for** | Phase 23 — Reporting (roadmap renumbered 2026-10-06) |
 
 ### Problem
 
@@ -82,16 +82,16 @@ Content coverage largely exists under the longer names; naming/split is inconsis
 | Field | Value |
 |-------|-------|
 | **ID** | ADP-003 |
-| **Status** | `PENDING DECISION` |
+| **Status** | `DECIDED` (2026-10-06) |
 | **Discovered** | Phase 0 repository inspection |
-| **Blocking for** | Phase 4 — Authentication |
+| **Blocking for** | Phase 3 — Authentication & Authorization |
 
 ### Problem
 
 - `CURSOR_MASTER_INSTRUCTIONS.md` prefers **Keycloak** (or approved auth architecture).
 - `DATABASE_SCHEMA.md` suggests local fields such as `password_hash` on users.
 
-These approaches are compatible only if local fields are identity-provider metadata/cache — or if local auth is chosen instead of Keycloak. The authoritative Phase 4 approach is not finalized.
+These approaches are compatible only if local fields are identity-provider metadata/cache — or if local auth is chosen instead of Keycloak.
 
 ### Options (for later decision)
 
@@ -101,8 +101,11 @@ These approaches are compatible only if local fields are identity-provider metad
 
 ### Decision
 
-`PENDING DECISION`  
-**Do not implement Authentication/Keycloak in Phase 0/1.**
+`DECIDED` — **Option 2: application-managed authentication** (Argon2id password hashing) behind an
+`IdentityProvider` abstraction. Business modules depend only on the internal user id, sessions and
+permissions, so a future Keycloak/OIDC provider can replace the local provider without redesign.
+Keycloak is **not** installed or implemented in Phase 3. Password fields live in a dedicated
+`user_credentials` table owned by the local provider. See `AUTHENTICATION_AUTHORIZATION.md`.
 
 ---
 
@@ -111,9 +114,9 @@ These approaches are compatible only if local fields are identity-provider metad
 | Field | Value |
 |-------|-------|
 | **ID** | ADP-004 |
-| **Status** | `PENDING DECISION` |
+| **Status** | `DECIDED` (2026-10-06) |
 | **Discovered** | Phase 0 repository inspection |
-| **Blocking for** | Phase 5–6 (Authorization / Hospital tenant) and Prisma domain models |
+| **Blocking for** | Phase 3 (Authentication & Authorization) and Prisma domain models |
 
 ### Problem
 
@@ -127,8 +130,9 @@ Documentation mentions both `tenant_id` and `hospital_id` as acceptable relation
 
 ### Decision
 
-`PENDING DECISION`  
-**Do not build full domain schema until decided.** Phase 1 Prisma file remains a minimal placeholder only.
+`DECIDED` — **Option 2: `tenant_id` everywhere.** A Hospital represents the tenant in the current
+product model. Tenant-owned tables use the column `tenant_id` (Prisma field `tenantId`) referencing
+`hospitals.id`. `hospital_id` / `hospitalId` must not be used as an interchangeable tenant identifier.
 
 ---
 
@@ -175,6 +179,39 @@ PostgreSQL and Redis are unaffected and verified. The API is decoupled from MinI
 
 `PENDING DECISION` — production MinIO image source, licensing and deployment model must be decided
 before production.
+
+---
+
+## 6. Phase 3 Decisions (Authentication & Authorization)
+
+| Field | Value |
+|-------|-------|
+| **ID** | ADP-006 |
+| **Status** | `DECIDED` (2026-10-06) |
+| **Scope** | Phase 3 — Authentication & Authorization |
+
+| Ref | Decision |
+|-----|----------|
+| P3-D0 | Authentication + Authorization are implemented together as **Phase 3**. The roadmap was renumbered (Design System is now Phase 4; Hospital/Tenant Management Phase 5; later phases shift by one). Only minimal authentication/administration UI; the full Design System is deferred. |
+| P3-D1 | Application-managed authentication with Argon2id behind an `IdentityProvider` interface (ADP-003). No Keycloak in this phase. |
+| P3-D2 | `tenant_id` everywhere; Hospital = tenant (ADP-004). |
+| P3-D3 | `UserHospitalMembership`: a user may belong to one or more hospitals. The active tenant is selected from the user's own active memberships and stored in the server-side session; the client never defines tenant context. `User` and `Staff` remain separate; Staff is not implemented. |
+| P3-D4 | Opaque server-side sessions stored in PostgreSQL (only a SHA-256 hash of the token). Secure + HttpOnly + SameSite cookies, idle timeout, absolute expiry, revocation, session management, CSRF protection. Redis is used only for login rate limiting. |
+| P3-D5 | Permission naming `<resource>.<action>` with `read` (e.g. `patient.read`). The `<module>.<resource>.<action>` scheme in `ROLES_PERMISSIONS_MATRIX.md` §4 is superseded. |
+| P3-D6 | Complete permission registry defined in code and synchronized into PostgreSQL. Roles are data-driven; system roles are read-only templates that never bypass tenant isolation. Authorization uses `PermissionService.can()` — never role-name checks. Seeded role templates follow `RBAC.md` §7. |
+| P3-D7 | Application-layer tenant isolation with automatic Prisma tenant filtering. PostgreSQL RLS is deferred: the current application database user is a superuser (superusers bypass RLS). **RLS + a non-superuser application role is a production-hardening requirement.** |
+| P3-D8 | MFA-ready interfaces/configuration only (no TOTP). No self-service email password reset (Notifications is a later phase); admin-initiated password reset only. Minimal Hospital and Department entities. Break-glass access is not implemented. Module activation is not implemented: only core modules (`platform`, `system`, `administration`, `identity`, `audit`) are enabled; permissions of all other modules are denied until module activation exists. |
+| P3-D9 | `pnpm auth:bootstrap` creates the first platform administrator: interactive password entry only, refuses when an active platform administrator exists, forces a password change on first login, audited. |
+| P3-D10 | Defaults: password min 12, lockout after 5 failures for 15 minutes, idle timeout 30 minutes, absolute lifetime 12 hours, login rate limiting per IP and per username. All configurable via environment. |
+| P3-D11 | Append-only `audit_logs`; UPDATE/DELETE/TRUNCATE rejected by database triggers; no passwords/tokens/secrets; permission denials recorded; written in the same transaction as the mutation. |
+| P3-D12 | New dependencies limited to Argon2id hashing and Helmet. |
+
+### Still pending (not resolved by Phase 3)
+
+- Production MinIO image/licensing (ADP-005), reporting spec (ADP-001), doc naming (ADP-002).
+- Break-glass access, department/ward/assigned-patient resource policies for clinical modules,
+  service accounts (`SYNC_SERVICE`, devices), MFA (TOTP) — later phases.
+- Reverse proxy (Nginx/Traefik) listed in the Phase 2 roadmap section is not yet deployed.
 
 ---
 

@@ -10,13 +10,16 @@ export default function HomePage() {
       </p>
       <h1 className="text-4xl font-bold text-hospital-ink">{APP_NAME}</h1>
       <p className="max-w-2xl text-lg leading-relaxed text-slate-700">
-        Phase 0 + Phase 1 monorepo foundation is online. Specifications in{' '}
+        Foundation, infrastructure and authentication are online. Specifications in{' '}
         <code className="rounded bg-white px-1.5 py-0.5 text-sm">docs/</code> are the source of
         truth. Business modules are not started yet.
       </p>
       <div className="flex flex-wrap gap-3">
+        <Link href="/login">
+          <Button>Sign in</Button>
+        </Link>
         <Link href="/health">
-          <Button>Open health page</Button>
+          <Button variant="secondary">Open health page</Button>
         </Link>
       </div>
     </main>

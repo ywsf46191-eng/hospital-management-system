@@ -1,3 +1,5 @@
+export * from './auth';
+
 export type HospitalType = 'GOVERNMENT' | 'PRIVATE' | 'NON_PROFIT';
 
 export type HealthStatus = 'ok' | 'degraded' | 'down';

@@ -10,6 +10,7 @@
     "lint": "eslint \"src/**/*.ts\" \"test/**/*.ts\" --max-warnings=0",
     "typecheck": "tsc -p tsconfig.test.json --noEmit",
     "prisma:generate": "node scripts/prisma.cjs generate",
+    "auth:bootstrap": "nest build && node dist/cli/auth-bootstrap.js",
     "test": "tsc -p tsconfig.test.json && node --test --test-force-exit \"dist-test/test/unit/**/*.test.js\"",
     "test:integration": "tsc -p tsconfig.test.json && node --test --test-force-exit --test-concurrency=1 \"dist-test/test/integration/**/*.test.js\""
   },
@@ -20,7 +21,9 @@
     "@nestjs/common": "^11.0.1",
     "@nestjs/core": "^11.0.1",
     "@nestjs/platform-express": "^11.0.1",
+    "@node-rs/argon2": "^2.0.2",
     "@prisma/client": "^6.16.0",
+    "helmet": "^8.1.0",
     "ioredis": "^5.4.2",
     "minio": "^8.0.5",
     "prisma": "^6.16.0",
